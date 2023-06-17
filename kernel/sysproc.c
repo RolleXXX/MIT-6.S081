@@ -5,6 +5,7 @@
 #include "param.h"
 #include "memlayout.h"
 #include "spinlock.h"
+#include "sysinfo.h"
 #include "proc.h"
 
 uint64
@@ -94,4 +95,36 @@ sys_uptime(void)
   xticks = ticks;
   release(&tickslock);
   return xticks;
+}
+
+uint64 
+sys_trace(void) {
+  int trace_sys_mask;
+  if (argint(0, &trace_sys_mask) < 0)
+    return -1;
+  myproc()->tracemask |= trace_sys_mask;
+  return 0;
+}
+
+//不知道为啥我找不到这几个函数
+extern uint64 kfreemem(void);
+extern uint64 count_free_proc(void);
+
+uint64
+sys_sysinfo(void){
+  struct proc *my_proc = myproc();
+  uint64 p;
+  // 获取用户提供的buffer地址
+  if(argaddr(0,&p)<0){
+    return -1;
+  }
+
+  struct sysinfo s;
+  s.freemem = kfreemem();
+  s.nproc = count_free_proc();
+
+  if(copyout(my_proc->pagetable,p,(char*)&s,sizeof(s))<0){
+    return -1;
+  }
+  return 0;
 }

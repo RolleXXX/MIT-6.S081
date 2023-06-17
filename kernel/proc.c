@@ -127,6 +127,7 @@ found:
   p->context.ra = (uint64)forkret;
   p->context.sp = p->kstack + PGSIZE;
 
+  p->tracemask = 0;
   return p;
 }
 
@@ -277,6 +278,7 @@ fork(void)
 
   np->parent = p;
 
+  np->tracemask = p->tracemask;
   // copy saved user registers.
   *(np->trapframe) = *(p->trapframe);
 
@@ -692,4 +694,19 @@ procdump(void)
     printf("%d %s %s", p->pid, state, p->name);
     printf("\n");
   }
+}
+
+// Count how many processes are not in the state of UNUSED
+uint64
+count_free_proc(void){
+  struct proc *p;
+  uint64 count = 0;
+  for (p = proc; p < &proc[NPROC];p++){
+    acquire(&p->lock);
+    if(p->state!=UNUSED){
+      count++;
+    }
+    release(&p->lock);
+  }
+  return count;
 }
