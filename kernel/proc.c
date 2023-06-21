@@ -94,6 +94,7 @@ allocproc(void)
 {
   struct proc *p;
 
+
   for(p = proc; p < &proc[NPROC]; p++) {
     acquire(&p->lock);
     if(p->state == UNUSED) {
@@ -102,6 +103,9 @@ allocproc(void)
       release(&p->lock);
     }
   }
+
+  
+
   return 0;
 
 found:
@@ -109,6 +113,12 @@ found:
 
   // Allocate a trapframe page.
   if((p->trapframe = (struct trapframe *)kalloc()) == 0){
+    release(&p->lock);
+    return 0;
+  }
+
+  // Allocate a trapframe page.
+  if((p->alarmframe = (struct trapframe *)kalloc()) == 0){
     release(&p->lock);
     return 0;
   }
@@ -127,6 +137,11 @@ found:
   p->context.ra = (uint64)forkret;
   p->context.sp = p->kstack + PGSIZE;
 
+  p->alarm_handler = 0;
+  p->alarm_period = 0;
+  p->ticks_since_last_alarm = 0;
+  p->inalarm = 0;
+
   return p;
 }
 
@@ -139,6 +154,11 @@ freeproc(struct proc *p)
   if(p->trapframe)
     kfree((void*)p->trapframe);
   p->trapframe = 0;
+
+  if(p->alarmframe)
+    kfree((void *)p->alarmframe);
+  p->alarmframe = 0;
+
   if(p->pagetable)
     proc_freepagetable(p->pagetable, p->sz);
   p->pagetable = 0;

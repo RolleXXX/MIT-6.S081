@@ -121,6 +121,7 @@ panic(char *s)
   printf("panic: ");
   printf(s);
   printf("\n");
+  backtrace();
   panicked = 1; // freeze uart output from other CPUs
   for(;;)
     ;
@@ -131,4 +132,28 @@ printfinit(void)
 {
   initlock(&pr.lock, "pr");
   pr.locking = 1;
+}
+
+
+void
+backtrace(void){
+  // 栈是从高地址向低地址扩展（向下扩展）
+  printf("backtrace:\n");
+
+  // 1.获取当前栈顶指针
+  uint64 curr_fp = r_fp();
+  // 栈只有一页大小，所以可以找到栈顶的位置
+  uint64 stk_bottom = PGROUNDUP(curr_fp);
+
+  while(curr_fp<stk_bottom){
+
+    // 获取上一个栈的返回地址和栈顶指针
+    uint64 ret = *(pte_t *)(curr_fp - 0x8);
+    uint64 prev_fp = *(pte_t *)(curr_fp - 0x10); // xv6规定一个栈帧是16
+    // 打印返回地址
+    printf("%p\n", ret);
+    // 栈顶指针移动到上一个栈
+    curr_fp = prev_fp;
+    
+  }
 }
