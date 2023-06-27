@@ -601,6 +601,7 @@ int lazyvalidate(struct proc* p, uint64 va) {
       // invalid address
       return -1;
   }
+  // 缺页的情况应该是找不到物理地址，即walkaddr返回0
   if (walkaddr(p->pagetable, va) != 0) {
       return 0; // already mapped
   }

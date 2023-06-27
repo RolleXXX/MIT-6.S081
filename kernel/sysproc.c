@@ -50,7 +50,8 @@ sys_sbrk(void)
   addr = myproc()->sz;
   if (n >= 0 ) {
     myproc()->sz += n; // pseudo size increase without physical allocation
-  } else {
+  } 
+  else {
       // handle negative sbrk(), only use for shrinking purpose
       if(growproc(n) < 0)
         return -1;
