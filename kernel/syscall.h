@@ -20,9 +20,5 @@
 #define SYS_link   19
 #define SYS_mkdir  20
 #define SYS_close  21
-<<<<<<< HEAD
 #define SYS_trace  22
-#define SYS_sysinfo   23
-=======
-#define SYS_trace  22
->>>>>>> util
+#define SYS_sysinfo 23
