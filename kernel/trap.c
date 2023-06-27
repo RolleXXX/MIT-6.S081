@@ -67,6 +67,7 @@ usertrap(void)
     syscall();
   } else if (r_scause() == 15) {
     // write permission fault on a read-only COW page
+    // 试图在一个COW只读页面上进行写操作, 为该进程额外分配复制一页
     if (cowalloc(p->pagetable, r_stval()) < 0) {
       p->killed = 1;
     }
