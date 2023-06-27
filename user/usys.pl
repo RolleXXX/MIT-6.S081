@@ -37,4 +37,7 @@ entry("sbrk");
 entry("sleep");
 entry("uptime");
 entry("trace");
+<<<<<<< HEAD
 entry("sysinfo");
+=======
+>>>>>>> util

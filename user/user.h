@@ -24,8 +24,12 @@ int getpid(void);
 char* sbrk(int);
 int sleep(int);
 int uptime(void);
+<<<<<<< HEAD
 int trace(int);  // 新系统调用trace的函数原型签名
 int sysinfo(struct sysinfo *);
+=======
+int trace(int);
+>>>>>>> util
 
 // ulib.c
 int stat(const char*, struct stat*);

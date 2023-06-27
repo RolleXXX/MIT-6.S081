@@ -97,6 +97,7 @@ sys_uptime(void)
   return xticks;
 }
 
+<<<<<<< HEAD
 uint64 
 sys_trace(void) {
   int trace_sys_mask;
@@ -126,5 +127,17 @@ sys_sysinfo(void){
   if(copyout(my_proc->pagetable,p,(char*)&s,sizeof(s))<0){
     return -1;
   }
+=======
+uint64
+sys_trace(void)
+{
+  // 拿到系统调用的数字
+  int mask;
+  if(argint(0,&mask)<0)
+    return -1;
+  // 做相与 实际上是把要追踪的那一位设为1
+  printf("mask: %d\n", mask);
+  myproc()->tracemask |= mask;
+>>>>>>> util
   return 0;
 }

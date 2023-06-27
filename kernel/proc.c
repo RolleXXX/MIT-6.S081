@@ -128,6 +128,10 @@ found:
   p->context.sp = p->kstack + PGSIZE;
 
   p->tracemask = 0;
+<<<<<<< HEAD
+=======
+
+>>>>>>> util
   return p;
 }
 
@@ -267,6 +271,9 @@ fork(void)
   if((np = allocproc()) == 0){
     return -1;
   }
+
+  // inherit parent's trace mask << fork出的新进程继承父进程的bit mask
+  np->tracemask = p->tracemask;
 
   // Copy user memory from parent to child.
   if(uvmcopy(p->pagetable, np->pagetable, p->sz) < 0){
