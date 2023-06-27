@@ -9,6 +9,11 @@
 #include "riscv.h"
 #include "defs.h"
 
+// 计算物理页的idx
+#define PA2INDEX(pa) (((uint64)pa)/PGSIZE)
+// reference count for each physical page to facilitate COW
+int cowcount[PHYSTOP/PGSIZE];
+
 void freerange(void *pa_start, void *pa_end);
 
 extern char end[]; // first address after kernel.
@@ -23,9 +28,7 @@ struct {
   struct run *freelist;
 } kmem;
 
-// reference count for each physical page to facilitate COW
-#define PA2INDEX(pa) (((uint64)pa)/PGSIZE)
-int cowcount[PHYSTOP/PGSIZE];
+
 
 
 void
@@ -41,6 +44,7 @@ freerange(void *pa_start, void *pa_end)
   char *p;
   p = (char*)PGROUNDUP((uint64)pa_start);
   for(; p + PGSIZE <= (char*)pa_end; p += PGSIZE) {
+    // 因为kfree中要--，所以这里先加个1，让加入到freelist的ref为0
     cowcount[PA2INDEX(p)] = 1; // add into free list initially
     kfree(p);
   }
@@ -98,6 +102,7 @@ kalloc(void)
     if (cowcount[idx] != 0) {
       panic("kalloc: cowcount[idx] != 0");
     }
+    // 初始化ref为1
     cowcount[idx] = 1;
   }
   return (void*)r;

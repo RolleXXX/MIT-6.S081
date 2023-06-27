@@ -476,6 +476,7 @@ cowalloc(pagetable_t pagetable, uint64 va) {
     return -1;
   }
   uint64 pa_old = PTE2PA(*pte);
+  // memmove是更完美的复制，并不是移动
   memmove((void *)pa_new, (const void *)pa_old, PGSIZE);
   kfree((void *)pa_old); // decrement ref count by 1
   *pte = PA2PTE(pa_new) | PTE_FLAGS(*pte) | PTE_W;
