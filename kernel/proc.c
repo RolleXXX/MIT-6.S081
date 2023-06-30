@@ -476,13 +476,15 @@ scheduler(void)
         // before jumping back to us.
         p->state = RUNNING;
         c->proc = p;
-        swtch(&c->context, &p->context);
+        swtch(&c->context, &p->context);// 再切换t2
 
         // Process is done running for now.
         // It should have changed its p->state before coming back.
+
+        //t1经过swtch转到这一步
         c->proc = 0;
       }
-      release(&p->lock);
+      release(&p->lock); // 先释放t1的锁
     }
     if(nproc <= 2) {   // only init and sh exist
       intr_on();
@@ -514,7 +516,7 @@ sched(void)
     panic("sched interruptible");
 
   intena = mycpu()->intena;
-  swtch(&p->context, &mycpu()->context);
+  swtch(&p->context, &mycpu()->context);// 转到cpu调度线程，即scheduler中swtch中的下一行
   mycpu()->intena = intena;
 }
 
@@ -523,7 +525,7 @@ void
 yield(void)
 {
   struct proc *p = myproc();
-  acquire(&p->lock);
+  acquire(&p->lock);// 锁t1
   p->state = RUNNABLE;
   sched();
   release(&p->lock);
