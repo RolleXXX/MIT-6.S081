@@ -290,7 +290,7 @@ sys_open(void)
   int fd, omode;
   struct file *f;
   struct inode *ip;
-  int n;
+  int n,r;
 
   if((n = argstr(0, path, MAXPATH)) < 0 || argint(1, &omode) < 0)
     return -1;
@@ -310,6 +310,34 @@ sys_open(void)
     }
     ilock(ip);
     if(ip->type == T_DIR && omode != O_RDONLY){
+      iunlockput(ip);
+      end_op();
+      return -1;
+    }
+  }
+
+  // deal with symbolic link it is and no_follow flag is not set
+  int depth = 0;
+  while(ip->type==T_SYMLINK&&!(omode&O_NOFOLLOW)){
+    char ktarget[MAXPATH];
+    memset(ktarget, 0, MAXPATH);
+    // 从软链接的inode的[0, MAXPATH]读出它所对应的target path
+    if((r=readi(ip,0,(uint64)ktarget,0,MAXPATH)<0)){
+      iunlockput(ip);
+      end_op();
+      return -1;
+    }
+    iunlockput(ip);
+    // target path 不存在
+    if((ip=namei(ktarget))==0){
+      end_op();
+      return -1;
+    }
+
+    ilock(ip);
+    depth++;
+    if(depth>10){
+      // 可能A->B,B->A
       iunlockput(ip);
       end_op();
       return -1;
@@ -482,5 +510,35 @@ sys_pipe(void)
     fileclose(wf);
     return -1;
   }
+  return 0;
+}
+
+uint64
+sys_symlink(void){
+  char path[MAXPATH], target[MAXPATH];
+  struct inode *ip;
+  // 读取参数
+  if(argstr(0,target,MAXPATH)<0){
+    return -1;
+  }
+  if(argstr(1,path,MAXPATH)<0){
+    return -1;
+  }
+  // 开启事务
+  begin_op();
+  // 为这个符号链接新建一个inode
+  if((ip=create(path,T_SYMLINK,0,0))==0){
+    end_op();
+    return -1;
+  }
+  // 在符号链接的data中写入被链接的文件
+  if(writei(ip,0,(uint64)target,0,MAXPATH)<MAXPATH){
+    iunlockput(ip);
+    end_op();
+    return -1;
+  }
+  // 提交事务
+  iunlockput(ip);
+  end_op();
   return 0;
 }
