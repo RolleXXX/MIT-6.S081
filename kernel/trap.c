@@ -3,8 +3,12 @@
 #include "memlayout.h"
 #include "riscv.h"
 #include "spinlock.h"
+#include "sleeplock.h"
 #include "proc.h"
 #include "defs.h"
+#include "fs.h"
+#include "file.h"
+#include "fcntl.h"
 
 struct spinlock tickslock;
 uint ticks;
@@ -67,7 +71,63 @@ usertrap(void)
     syscall();
   } else if((which_dev = devintr()) != 0){
     // ok
-  } else {
+  } else if(r_scause()==13 || r_scause()==15) {
+    uint64 va = r_stval();
+    struct vma *vma = 0;
+    // va不能越界且必须在堆区中
+    if(va>=p->sz||va<=p->trapframe->sp){
+      goto killing;
+    }
+    // 寻找在那块vma
+    for (int i = 0; i < NVMA;i++){
+      if(va>=p->vmas[i].addr&&va<p->vmas[i].addr+p->vmas[i].len){
+        vma = &p->vmas[i];
+        break;
+      }
+    }
+
+    if(!vma){
+      goto killing;
+    }
+
+    /** 在 vm 中找到了缺页的文件对象 */
+    va = PGROUNDDOWN(va);
+
+    // 为文件对象的vm分配内存，用来容纳新的内容
+    char *mem = kalloc();
+    if(mem==0)
+      goto killing;
+    memset(mem, 0, PGSIZE);
+
+    // mmap真实操作
+    /** 将存储在 disk 中的文件对象的新内容拷贝到 vm */
+    ilock(vma->file->ip);
+    readi(vma->file->ip, 0, (uint64)mem, va-vma->addr+vma->offset, PGSIZE);
+    iunlock(vma->file->ip);
+
+    int flags = PTE_U;
+    if(vma->prot & PROT_READ) 
+      flags |= PTE_R;
+    if(vma->prot & PROT_WRITE)
+      flags |= PTE_W;
+    if(vma->prot & PROT_EXEC)
+      flags |= PTE_X;
+
+    if(mappages(p->pagetable, va, PGSIZE, (uint64)mem, flags) != 0)
+      goto freeing;
+
+    goto reset;
+
+    freeing:
+      kfree(mem);
+
+    killing:
+      p->killed = 1;
+
+    reset:;
+    }
+  else
+  {
     printf("usertrap(): unexpected scause %p pid=%d\n", r_scause(), p->pid);
     printf("            sepc=%p stval=%p\n", r_sepc(), r_stval());
     p->killed = 1;

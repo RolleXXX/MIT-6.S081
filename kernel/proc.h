@@ -1,3 +1,4 @@
+#define NVMA 16
 // Saved registers for kernel context switches.
 struct context {
   uint64 ra;
@@ -80,6 +81,16 @@ struct trapframe {
   /* 280 */ uint64 t6;
 };
 
+struct vma {
+  uint64 addr;
+  int len;
+  int prot;
+  int flags;
+  int fd;
+  int offset;
+  struct file *file;
+};
+
 enum procstate { UNUSED, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 
 // Per-process state
@@ -103,4 +114,5 @@ struct proc {
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
+  struct vma vmas[NVMA];      // 虚拟内存区域的个数，即一个进程能支持16个文件的映射
 };

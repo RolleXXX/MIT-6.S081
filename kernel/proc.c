@@ -302,6 +302,13 @@ fork(void)
 
   np->state = RUNNABLE;
 
+  /** 子进程要拷贝父进程的 vmas */
+  for(int i=0; i<NVMA; i++) {
+    memmove(&np->vmas[i], &p->vmas[i], sizeof(p->vmas[i]));
+    if(p->vmas[i].file)
+      filedup(p->vmas[i].file);
+  }
+
   release(&np->lock);
 
   return pid;
@@ -353,7 +360,11 @@ exit(int status)
     }
   }
 
-  begin_op();
+  for (int i = 0; i < NVMA;i++){
+    uvmunmap(p->pagetable, p->vmas[i].addr, p->vmas[i].len / PGSIZE, 1);
+  }
+
+    begin_op();
   iput(p->cwd);
   end_op();
   p->cwd = 0;
